@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Management</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    /* Global Styles */
+    body,
+    html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    h1,
+    h3 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    /* Form Styles */
+    .form-container {
+      width: 100%;
+      padding: 20px;
+      background-color: rgba(255, 255, 255, 0.6);
+      border-radius: 20px;
+      margin-bottom: 30px;
+      transition: transform 0.3s;
+      border-style: solid;
+      border-color: gray;
+    }
+
+    input,
+    button {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      border: none;
+      border-radius: 10px;
+    }
+
+    input {
+      background-color: rgba(255, 255, 255, 0.9);
+      color: #333;
+    }
+
+    button {
+      background-color: #4CAF50;
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.3s, transform 0.3s;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    /* Table Styles */
+    .list-container {
+      width: 100%;
+      padding: 20px;
+      border-style: solid;
+      border-color: gray;
+      border-radius: 20px;
+      overflow-y: auto;
+      max-height: 400px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      padding: 15px;
+      text-align: left;
+      background-color: rgba(255, 255, 255, 0.7);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    th {
+      background-color: rgba(0, 0, 0, 0.1);
+    }
+
+    /* Button Styles for Actions */
+    .action-button {
+      background-color: #008CBA;
+      color: white;
+      padding: 8px 15px;
+      border-radius: 10px;
+      text-align: center;
+      cursor: pointer;
+      transition: background-color 0.3s, transform 0.3s;
+    }
+
+    .action-button:hover {
+      background-color: #005f75;
+    }
+
+    .delete-button {
+      background-color: #e74c3c;
+    }
+
+    .delete-button:hover {
+      background-color: #c0392b;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+    <!-- Form for Creating and Updating Users -->
+    <div class="form-container">
+      <h3>Create / Update User</h3>
+      <form id="userForm">
+        <input type="text" id="userId" placeholder="User ID (for update only)" readonly>
+        <input type="text" id="userName" placeholder="Enter Name" required>
+        <input type="email" id="userEmail" placeholder="Enter Email" required>
+        <button type="submit" id="submitButton">Create User</button>
+      </form>
+    </div>
+
+    <!-- List of Users -->
+    <div class="list-container">
+      <h3>Users List</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="userTableBody">
+          <!-- Users will be populated here -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = '/api/v1/users';
+
+    document.getElementById('userForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const id = document.getElementById('userId').value;
+      const name = document.getElementById('userName').value;
+      const email = document.getElementById('userEmail').value;
+
+      const user = { name, email };
+
+      if (id) {
+        await updateUser(id, user);
+      } else {
+        await createUser(user);
+      }
+
+      clearForm();
+      listUsers();
+    });
+
+    async function createUser (user) {
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(user),
+        });
+        const data = await response.json();
+        alert(`User created with ID: ${data.id}`);
+      } catch (error) {
+        console.error('Error creating user:', error);
+      }
+    }
+
+    async function updateUser (id, user) {
+      try {
+        const response = await fetch(`${API_URL}/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(user),
+        });
+        const data = await response.json();
+        alert(data.message);
+      } catch (error) {
+        console.error('Error updating user:', error);
+      }
+    }
+
+    async function deleteUser (id) {
+      if (!confirm('Are you sure you want to delete this user?')) return;
+
+      try {
+        const response = await fetch(`${API_URL}/${id}`, {
+          method: 'DELETE',
+        });
+        const data = await response.json();
+        alert(data.message);
+        listUsers();
+      } catch (error) {
+        console.error('Error deleting user:', error);
+      }
+    }
+
+    async function listUsers () {
+      try {
+        const response = await fetch(API_URL);
+        const users = await response.json();
+        const userTableBody = document.getElementById('userTableBody');
+        userTableBody.innerHTML = '';
+
+        users.forEach((user) => {
+          const row = `
+                        <tr>
+                            <td>${user.id}</td>
+                            <td>${user.name}</td>
+                            <td>${user.email}</td>
+                            <td>
+                                <button class="action-button" onclick="editUser('${user.id}', '${user.name}', '${user.email}')">Edit</button>
+                                <button class="action-button delete-button" onclick="deleteUser('${user.id}')">Delete</button>
+                            </td>
+                        </tr>
+                    `;
+          userTableBody.insertAdjacentHTML('beforeend', row);
+        });
+      } catch (error) {
+        console.error('Error fetching users:', error);
+      }
+    }
+
+    function editUser (id, name, email) {
+      document.getElementById('userId').value = id;
+      document.getElementById('userName').value = name;
+      document.getElementById('userEmail').value = email;
+      document.getElementById('submitButton').textContent = 'Update User';
+    }
+
+    function clearForm () {
+      document.getElementById('userId').value = '';
+      document.getElementById('userName').value = '';
+      document.getElementById('userEmail').value = '';
+      document.getElementById('submitButton').textContent = 'Create User';
+    }
+
+    window.onload = listUsers;
+  </script>
+
+</body>
+
+</html>
